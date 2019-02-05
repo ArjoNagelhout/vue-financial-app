@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Vue.js financial app</title>
+	<link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	<style>
+
+	@media print{.no-print, .no-print *{display: none !important;}}
+
+	html {
+		background-color:gainsboro;
+		font-family: 'Roboto Mono', monospace;
+		font-size:0.8em;
+	}
+	
+	body {
+		margin:10px;
+		padding:10px;
+	}
+	
+	table {
+		width:100%;
+		border: 1px black solid;
+	}
+	
+	div {
+		padding:10px;
+	}
+
+	h1 {
+		margin-bottom:0;
+	}
+
+	h4 {
+		margin-top:0;
+	}
+
+	#app {
+		background-color:white;
+		padding:10px;
+	}
+	#nieuw {
+		background-color:white;
+		border: 1px black solid;
+		margin-top:10px;
+		
+	}
+	#overzicht {
+		background-color:white;
+		padding:0px;
+	}
+	#gegevens {
+		background-color:gainsboro;
+		margin-top:10px;
+	}
+	tr {
+		background-color:white;
+	}
+	th {
+		background-color:gainsboro;
+	}
+	.total {
+		background-color:gainsboro;
+	}
+	</style>
+</head>
+<body>
+
+	<div id="app">
+		<h1 class="no-print" style="margin-after:0">Uitgaven</h1>
+		<h4 class="no-print" style="margin-before:0">Arjo Nagelhout - 4 februari 2019</h4>
+		<div id="overzicht">
+			<table>
+				<tr>
+					<th>Datum</th>
+					<th>Beschrijving</th>
+					<th>Bedrag</th>
+					<th></th>
+				</tr>
+				<tr v-for="(uitgave, index) in uitgaven_gesorteerd">
+					<td>{{uitgave.datum}}</td>
+					<td>{{uitgave.beschrijving}}</td>
+					<td align="right">€{{uitgave.bedrag.toFixed(2)}}</td>
+					<td><button @click="verwijder_uitgave(index)">X</button></td>
+				</tr>
+				<tr class="total">
+					<td></td>
+					<td>Totaal: </td>
+					<td align="right">€{{totaal.toFixed(2)}}</td>
+					<td></td>
+				</tr>
+
+			</table>
+		</div>
+		<div id="nieuw" class="no-print">
+			<h4 style="margin-before:0">Voeg nieuwe uitgave toe</h3>
+			<input v-model="dag" type="number" min="1" max="31"> / 
+			<input v-model="maand" type="number" min="1" max="12"> / 
+			<input v-model="jaar" type="number" min="2010" max="2020"><br>
+			<input v-model="beschrijving_input" placeholder="beschrijving"><br>
+			<input v-model="bedrag_input" placeholder="bedrag"><br>
+			<button v-on:click="voeg_uitgave_toe">Voeg uitgave toe</button>
+		</div>
+		<div id="gegevens" class="no-print">
+			<input @change="upload_bestand($event)" type="file" accept="application/json">
+			<button v-on:click="download_bestand">Sla gegevens op</button>
+		</div>
+
+		
+	</div>
+
+	<script>
+		var app = new Vue({
+			el: '#app',
+			data: {
+				dag: 1,
+				maand: 1,
+				jaar: 2010,
+				beschrijving_input: "",
+				bedrag_input: "",
+				uitgaven: [],
+			},
+			methods: {
+				verwijder_uitgave: function(index) {
+					this.uitgaven.splice(index, 1)
+				},
+				voeg_uitgave_toe: function () {
+
+					if (this.bedrag_input != "") {
+
+						var maand_corrected = this.maand
+						var dag_corrected = this.dag
+						if (maand_corrected < 10) {
+							maand_corrected = "0"+maand_corrected
+						}
+						if (dag_corrected < 10) {
+							dag_corrected = "0"+dag_corrected
+						}
+
+						var date = this.jaar+"-"+maand_corrected+"-"+dag_corrected
+						this.uitgaven.push({datum: date, beschrijving: this.beschrijving_input, bedrag: parseFloat(this.bedrag_input)})
+						this.beschrijving_input = ""
+						this.bedrag_input = ""
+
+					}
+				},
+				upload_bestand: function (evt) {
+					var bestand = evt.target.files[0]
+
+					var reader = new FileReader();
+
+					var self = this
+					reader.onload = function(e) {
+						var contents = e.target.result;
+						self.uitgaven = JSON.parse(contents)
+					}
+					reader.readAsText(bestand)
+				},
+				download_bestand: function () {
+					
+					var json_output = JSON.stringify(this.uitgaven);
+					
+					function download(content, fileName, contentType) {
+					    var a = document.createElement("a");
+					    var file = new Blob([content], {type: contentType});
+					    a.href = URL.createObjectURL(file);
+					    a.download = fileName;
+					    a.click();
+					}
+					download(json_output, 'overzicht.json', 'application/json');
+
+				}
+			},
+			computed: {
+				totaal: function() {
+					let total = [];
+
+					Object.entries(this.uitgaven).forEach(([key, val]) => {
+						total.push(val.bedrag)
+					});
+
+					return total.reduce(function(total, num) {return total + num}, 0);
+				},
+				uitgaven_gesorteerd: function() {
+
+					function compare(a, b) {
+						if (a.datum < b.datum)
+							return -1;
+						if (a.datum > b.datum)
+							return 1;
+						return 0;
+					}
+
+					return this.uitgaven.sort(compare)
+				}
+			}
+		})
+	</script>
+</body>
+</html>
